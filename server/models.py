@@ -8,21 +8,19 @@ metadata = MetaData(naming_convention={
 
 db = SQLAlchemy(metadata=metadata)
 
-class Article(db.Model, SerializerMixin):
-    __tablename__ = 'articles'
-
+class Article(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    author = db.Column(db.String)
-    title = db.Column(db.String)
-    content = db.Column(db.String)
-    preview = db.Column(db.String)
-    minutes_to_read = db.Column(db.Integer)
-    date = db.Column(db.DateTime, server_default=db.func.now())
+    title = db.Column(db.String(100))
+    content = db.Column(db.Text)
+    author = db.Column(db.String(50))  # Add this field
 
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-
-    def __repr__(self):
-        return f'Article {self.id} by {self.author}'
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'content': self.content,
+            'author': self.author
+        }
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'

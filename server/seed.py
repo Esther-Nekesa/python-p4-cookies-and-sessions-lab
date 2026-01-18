@@ -1,43 +1,20 @@
-#!/usr/bin/env python3
-
-from random import randint
-
-from faker import Faker
-
-from app import app
-from models import db, Article, User
-
-fake = Faker()
+from app import db, Article, app
 
 with app.app_context():
+    # Drop all tables (for fresh start)
+    db.drop_all()
+    db.create_all()
 
-    print("Deleting all records...")
-    Article.query.delete()
-    User.query.delete()
+    # Seed articles
+    articles = [
+        Article(title="First Post", content="This is the first article.", author="Alice"),
+        Article(title="Second Post", content="This is the second article.", author="Bob"),
+        Article(title="Third Post", content="This is the third article.", author="Charlie"),
+        Article(title="Fourth Post", content="This is the fourth article.", author="Diana"),
+    ]
 
-    fake = Faker()
-
-    print("Creating users...")
-    users = [User(name=fake.name()) for i in range(25)]
-    db.session.add_all(users)
-
-    print("Creating articles...")
-    articles = []
-    for i in range(100):
-        content = fake.paragraph(nb_sentences=8)
-        preview = content[:25] + '...'
-        
-        article = Article(
-            author=fake.name(),
-            title=fake.sentence(),
-            content=content,
-            preview=preview,
-            minutes_to_read=randint(1,20),
-        )
-
-        articles.append(article)
-
-    db.session.add_all(articles)
-    
+    for article in articles:
+        db.session.add(article)
     db.session.commit()
-    print("Complete.")
+
+    print("Seeded articles successfully!")
