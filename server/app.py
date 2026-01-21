@@ -1,48 +1,45 @@
+#!/usr/bin/env python3
+
 from flask import Flask, jsonify, session
-from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from models import db, Article
+from config import Config
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///articles.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'supersecretkey'
+app.config.from_object(Config)
 
-db = SQLAlchemy(app)
+# REQUIRED for session handling
+app.secret_key = "super-secret-key"
 
-# Article model
-class Article(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100))
-    content = db.Column(db.Text)
-    author = db.Column(db.String(50))
+db.init_app(app)
+migrate = Migrate(app, db)
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'title': self.title,
-            'content': self.content,
-            'author': self.author
-        }
-
-# Route to get an article
-@app.route('/articles/<int:id>')
+# -------------------------
+# PAYWALL ROUTE
+# -------------------------
+@app.route('/articles/<int:id>', methods=['GET'])
 def get_article(id):
-    # Initialize page_views if first time
-    session['page_views'] = session.get('page_views', 0) + 1
+    session['page_views'] = session['page_views'] if 'page_views' in session else 0
+    session['page_views'] += 1
 
     if session['page_views'] > 3:
         return jsonify({'message': 'Maximum pageview limit reached'}), 401
 
-    article = db.session.get(Article, id)
+    article = Article.query.get(id)
+
     if not article:
-        return jsonify({'message': 'Article not found'}), 404
+        return jsonify({'error': 'Article not found'}), 404
 
-    return jsonify(article.to_dict())
+    return jsonify(article.to_dict()), 200
 
-# Route to clear session
-@app.route('/clear')
-def clear_session():
+# -------------------------
+# CLEAR SESSION ROUTE
+# -------------------------
+@app.route('/clear', methods=['GET'])
+def clear():
     session.clear()
-    return jsonify({'message': 'Session cleared'})
+    return jsonify({'message': 'Session cleared'}), 200
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=5555, debug=True)
